@@ -1,0 +1,18 @@
+db:
+    host: "host"
+    port: 5555
+    database: "redmine"
+    user: "redmine"
+    password: "passwords"
+bot:
+    id: "botId"
+query:
+    qUpcoming: "select ic.name as category, cv.value as idDialog, u.firstname as name, i.id as id, i.subject as task from issues i left join users u on u.id = i.assigned_to_id left join issue_categories ic on ic.id = i.category_id left join custom_values cv on cv.custom_field_id = 6 and cv.customized_id = i.assigned_to_id where i.tracker_id in (8) and i.status_id = 1 and i.start_date <= CURRENT_DATE + interval '7 day' and i.start_date >= CURRENT_DATE order by cv.value, ic.name"
+    qExpired: "select ic.name as category, cv.value as idDialog, u.firstname as name, i.id as id, i.subject as task from issues i left join users u on u.id = i.assigned_to_id left join issue_categories ic on ic.id = i.category_id left join custom_values cv on cv.custom_field_id = 6 and cv.customized_id = i.assigned_to_id where i.tracker_id in (8) and i.status_id = 1 and i.start_date < CURRENT_DATE order by cv.value, ic.name"
+messageTopic:
+    mUpcoming: "У Вас есть предстоящие задачи по обслуживанию:"
+    mExpired: "Вы просрочили обслуживание:"
+cron:
+    cUpcoming: "13 18 * * *"
+    cExpired: "13 18 * * *"
+    tZone: "UTC+3"

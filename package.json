@@ -1,0 +1,16 @@
+{
+  "name": "redmineReminder",
+  "version": "1.0.0",
+  "description": "Send telegram notifications about maintanence tasks",
+  "main": "app.js",
+  "author": "ch00kan0ff",
+  "dependencies": {
+    "config-yml": "0.10.3",
+    "cron": "4.3.0",
+    "pg": "8.14.0",
+    "telegraf": "4.16.3"
+  },
+  "scripts":{
+    "start": "node app.js"  
+  }
+}
