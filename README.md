@@ -1,3 +1,3 @@
 # redmineReminder
 
-[ссылка на докер](https://hub.docker.com/repository/docker/ch00kan0ff/redminereminder/tags/2.0.0/sha256-e9bb8505bad9f7685c5ecd1b5a4653aea4ec15adb36b5f3249c68a183a061d68)
+[ссылка на докер](https://hub.docker.com/repository/docker/ch00kan0ff/redminereminder/tags/2.0.1/sha256:d4c8a0143b4eb57185c7ae20338d77910d7fdbb213e22b83a8707e8f0788b6ae)
