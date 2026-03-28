@@ -1,3 +1,4 @@
+import fetch from 'node-fetch'
 import {Telegraf, Markup} from 'telegraf' //для отсылки сообщений в телегу
 import { CronJob } from 'cron'; //планировщик для периодической рассылки
 import pkg from 'config-yml';   //либа, которая позволяет хранить настройки в yaml
@@ -8,6 +9,9 @@ const { Client } = pg
 
 const bot = new Telegraf(config.bot.id)  //создаем бота
 
+
+
+if (config.useTG == 1){
 //создаем клавиатуру для бота
 Markup.keyboard([
 			["Обслуживание на неделе"],
@@ -26,7 +30,7 @@ bot.hears("Пропущенное обслуживание", ctx => {
 });
 
 bot.launch() //запускаем бота
-
+}
 // Запускаем задание планировщика для получения предстоящих задач
 const jobUpcoming = new CronJob(
 	config.cron.cUpcoming,
@@ -49,10 +53,11 @@ const jobExpired = new CronJob(
 	config.cron.tZone
 );
 
+if (config.useTG == 1){
 // Enable graceful stop, чтобы это такое не было
 process.once('SIGINT', () => bot.stop('SIGINT'))
 process.once('SIGTERM', () => bot.stop('SIGTERM'))
-
+}
 
 //Функция для получения данных из БД, формирования и отправки сообщения.
 //На вход получает: 
@@ -79,8 +84,8 @@ const result = client.query(query) //Выполнение запроса
 
 //При получении каждой строки запроса выполняется этот код. Код из полученных данных от БД делает объект с данными для формирования сообщения
 query.on('row', (row) => {
-  if (usermessage.find(diags => diags.idDialog == row.iddialog)){ //тут проверяем есть ли элемент с таким idDialog, как в строке
-	const idd = usermessage.findIndex(diags => diags.idDialog == row.iddialog) //если нашелся, то ищем его индекс
+  if (usermessage.find(diags => diags.userid == row.userid)){ //тут проверяем есть ли элемент с таким userid, как в строке
+	const idd = usermessage.findIndex(diags => diags.userid == row.userid) //если нашелся, то ищем его индекс
 	if (usermessage[idd].categories.find(cats => cats.category == row.category)){ //и проверяем та ли у него категория
 		const idc = usermessage[idd].categories.findIndex(cats => cats.category == row.category) // если та, то ищем ещё индекс
 		usermessage[idd].categories[idc].tasks.push({ // и запихиваем в неё новую задачу
@@ -101,7 +106,9 @@ query.on('row', (row) => {
   }
   else {//добавляем новую строку, если ничего нет вообще или нет записи с таким ид диалога
 	  usermessage.push( {
+		  userid: row.userid,
 		  idDialog: row.iddialog,
+		  rcname: row.rcname,
 		  userName: row.name,
 		  categories: [{
 			category: row.category,
@@ -114,7 +121,7 @@ query.on('row', (row) => {
   }
 })
 
-//Это отрабатывает, когда весь запрос разобран. Формируется сообщение и отсылается в телегу
+//Это отрабатывает, когда весь запрос разобран. Формируется сообщение и отсылается в телегу или рокет
 query.on('end', () => {
   if (usermessage.length != 0){ //тут проверка, что что-то вообще получено
 	  usermessage.forEach((um) => {
@@ -125,12 +132,27 @@ query.on('end', () => {
 				 message += '[#' + t.id + '](https://redmine.ch00k.ru/issues/' + t.id + ') ' + t.task + '\n' //пишутся сами задачи со ссылкой на редмайн
 			 });
 		 });
-		 bot.telegram.sendMessage(um.idDialog, message,{parse_mode:'Markdown'}); //отправка сформированного сообщения в бот. Идентификатор диалога берется тоже из БД. Для каждого пользователя отправляется свое сообщение
-	 
+		 if (config.useTG == 1){
+			bot.telegram.sendMessage(um.idDialog, message,{parse_mode:'Markdown'}); //отправка сформированного сообщения в бот. Идентификатор диалога берется тоже из БД. Для каждого пользователя отправляется свое сообщение
+		 }
+		 if (config.useRC == 1){
+			 fetch(config.rocket.url, {
+				method: 'post',
+				body: JSON.stringify({
+					channel: '@'+um.rcname,
+					parseUrls: false,
+					text: message
+				}),
+				headers: {'Content-Type': 'application/json',
+				'X-Auth-Token':config.rocket.token,
+				'X-User-Id':config.rocket.userId
+				}
+			});
+		 }
   });
   }
   else{
-	  if (isDirect && idChat){
+	  if (isDirect && idChat && config.useTG == 1){
 		bot.telegram.sendMessage(idChat, 'Задач нет!',{parse_mode:'Markdown'}); //При прямом вызове по кнопке, если ничего не получено, то выводится сообщение что задач нет. При вызове планировщиком ничего не отправляется, чтобы не спамить
 	  }
   }
