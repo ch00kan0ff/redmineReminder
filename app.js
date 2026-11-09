@@ -66,7 +66,7 @@ process.once('SIGTERM', () => bot.stop('SIGTERM'))
 //   isDirect - признак того, что вызов функции делается человеком (по кнопке)
 //   idChat - идентификатор чата, для вызова по кнопке
 function sendMessageFromDB(qry,mes,isDirect,idChat){
-var message = ''
+var message_text = ''
 let usermessage = [] //структура объекта в массиве: idDialog, userName, categories:[category,tasks:[id,task]]
 
 //Создание подключения к БД
@@ -109,6 +109,7 @@ query.on('row', (row) => {
 		  userid: row.userid,
 		  idDialog: row.iddialog,
 		  rcname: row.rcname,
+		  mmid: row.mmid,
 		  userName: row.name,
 		  categories: [{
 			category: row.category,
@@ -125,15 +126,15 @@ query.on('row', (row) => {
 query.on('end', () => {
   if (usermessage.length != 0){ //тут проверка, что что-то вообще получено
 	  usermessage.forEach((um) => {
-		 message =  um.userName + '! ' + mes + '\n' //Добавляется обращение и заголовок сообщения
+		 message_text =  um.userName + '! ' + mes + '\n' //Добавляется обращение и заголовок сообщения
 		 um.categories.forEach((cat) => {
-			 message += '\n' + (cat.category?cat.category:'Без категории') + ':\n' // пишется категория задач
+			 message_text += '\n' + (cat.category?cat.category:'Без категории') + ':\n' // пишется категория задач
 			 cat.tasks.forEach((t) => {
-				 message += '[#' + t.id + '](https://redmine.ch00k.ru/issues/' + t.id + ') ' + t.task + '\n' //пишутся сами задачи со ссылкой на редмайн
+				 message_text += '[#' + t.id + '](https://redmine.ch00k.ru/issues/' + t.id + ') ' + t.task + '\n' //пишутся сами задачи со ссылкой на редмайн
 			 });
 		 });
 		 if (config.useTG == 1){
-			bot.telegram.sendMessage(um.idDialog, message,{parse_mode:'Markdown'}); //отправка сформированного сообщения в бот. Идентификатор диалога берется тоже из БД. Для каждого пользователя отправляется свое сообщение
+			bot.telegram.sendMessage(um.idDialog, message_text,{parse_mode:'Markdown'}); //отправка сформированного сообщения в бот. Идентификатор диалога берется тоже из БД. Для каждого пользователя отправляется свое сообщение
 		 }
 		 if (config.useRC == 1){
 			 fetch(config.rocket.url, {
@@ -141,13 +142,25 @@ query.on('end', () => {
 				body: JSON.stringify({
 					channel: '@'+um.rcname,
 					parseUrls: false,
-					text: message
+					text: message_text
 				}),
 				headers: {'Content-Type': 'application/json',
 				'X-Auth-Token':config.rocket.token,
 				'X-User-Id':config.rocket.userId
 				}
 			});
+		 }
+		 if (config.useMM == 1){
+			 fetch(config.mm.url, {
+				method: 'post',
+				body: JSON.stringify({
+					channel_id: um.mmid,
+					message: message_text
+				}),
+				headers: {'Content-Type': 'application/json',
+				'Authorization': 'Bearer ' + config.mm.token,
+				}
+			});   
 		 }
   });
   }
